@@ -1,13 +1,12 @@
 import {colorCode, mapRowToColor} from './ColorCode';
+import esgraph from 'esgraph';
 
-const esgraph = require('esgraph');
-import Viz from 'viz.js';
 
 let createGraph = function(sourceCode, parsedCode, args, table, substitutedCode) {
-    const cfg = esgraph(parsedCode.body[0].body);
-    const dot = esgraph.dot(cfg, {counter:0, source: sourceCode});
-    let finalDot = handleDot(dot, args, table, substitutedCode);
-    return Viz('digraph { ' + finalDot + ' }');
+    let cfg = esgraph(parsedCode.body[0].body);
+    let dot = esgraph.dot(cfg, {counter:0, source: sourceCode});
+    return handleDot(dot, args, table, substitutedCode);
+    // return Viz('digraph { ' + finalDot + ' }');
 };
 
 let handleDot = function(dot, args, table, substitutedCode) {
@@ -68,7 +67,6 @@ let getExitNodeNumber = function(arr) {
             return getNodeNumberAtArrCell(arr[i]);
         }
     }
-    return -1;
 };
 
 let colorGraph = function(arr) {
@@ -98,6 +96,9 @@ let checkIfNodeIsColoredFromLoop = function(nameAndCell, arr, coloredCells) {
     } else {
         while (isColored) {
             nameAndCell = getNextNodeNameAndCellTrueFalse(arr, nameAndCell[0], 'false');
+            if(nameAndCell === -1){
+                break;
+            }
             isColored = checkIfNewNodeIsColored(nameAndCell);
         }
     }
@@ -263,3 +264,10 @@ let getNodeLabel = function(string) {
 };
 
 export {createGraph};
+export {concatArrayToString};
+export {getNodeLabel};
+export {getNodeNumberAtArrCell};
+export {getNodeAfterArrow};
+export {changeShape};
+export {changeColor};
+export {addNumberToNodeLabel};

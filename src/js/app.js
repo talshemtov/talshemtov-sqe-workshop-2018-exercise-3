@@ -4,6 +4,7 @@ import {parseCodeForTable} from './code-analyzer';
 import {startSymbolicSub, tableAfterSub} from './SymbolicSubstitutioner';
 // import {colorCode} from './ColorCode';
 import {createGraph} from './CfgGenerator';
+import Viz from 'viz.js';
 
 
 $(document).ready(function () {
@@ -14,7 +15,8 @@ $(document).ready(function () {
         let parsedCode = parseCode(codeToParse);
         let table = parseCodeForTable(parsedCode);
         let substituted=startSymbolicSub(codeToParse, table, args);
-        let graph = createGraph(codeToParse, parsedCode, args, table, substituted);
+        let finalDot = createGraph(codeToParse, parsedCode, args, table, substituted);
+        let graph = Viz('digraph { ' + finalDot + ' }');
         // createTable(table);
 
         // let str = colorCode(substituted, args, tableAfterSub);
