@@ -1,9 +1,9 @@
 import $ from 'jquery';
 import {parseCode} from './code-analyzer';
 import {parseCodeForTable} from './code-analyzer';
-// import {startSymbolicSub, tableAfterSub} from './SymbolicSubstitutioner';
+import {startSymbolicSub, tableAfterSub} from './SymbolicSubstitutioner';
 // import {colorCode} from './ColorCode';
-import {createGraph} from "./CfgGenerator";
+import {createGraph} from './CfgGenerator';
 
 
 $(document).ready(function () {
@@ -12,10 +12,11 @@ $(document).ready(function () {
         let codeToParse = $('#codePlaceholder').val();
         let args = $('#argumentsPlaceholder').val();
         let parsedCode = parseCode(codeToParse);
-        // let table = parseCodeForTable(parsedCode);
-        let graph = createGraph(codeToParse, parsedCode, args);
+        let table = parseCodeForTable(parsedCode);
+        let substituted=startSymbolicSub(codeToParse, table, args);
+        let graph = createGraph(codeToParse, parsedCode, args, table, substituted);
         // createTable(table);
-        // let substituted=startSymbolicSub(codeToParse, table, args);
+
         // let str = colorCode(substituted, args, tableAfterSub);
         // let element = document.createElement('pre');
         // element.setAttribute('contenteditable', 'true');

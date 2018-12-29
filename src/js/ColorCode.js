@@ -1,15 +1,16 @@
 let innerHTML = '';
+let mapRowToColor =[];
 let clearInnerHTML = function() {
     innerHTML = '';
 };
 
 let colorCode = function (codeToColor, argsString, table) {
+    mapRowToColor = [];
     let splittedArgs = getSplittedArgs(argsString);
     let argNames = getArgNames(table, splittedArgs.length);
-    let mapRowToColor=[];
     let assignmentString = getAssignmentString(argNames, splittedArgs);
     for(let i=0; i<table.length; i++) {
-        if(table[i][1]==='IfStatement' || table[i][1]==='Else IfStatement') {
+        if(table[i][1]==='IfStatement' || table[i][1]==='Else IfStatement' || table[i][1]==='WhileStatement') {
             let strToEval = assignmentString+ ' ' + table[i][3] + ';';
             if(eval(strToEval)) {
                 mapRowToColor.push([table[i][5],'green']);
@@ -113,3 +114,4 @@ let getArgNames = function(table, numberOfArgs) {
 export {colorCode};
 export {innerHTML};
 export {clearInnerHTML};
+export {mapRowToColor};
