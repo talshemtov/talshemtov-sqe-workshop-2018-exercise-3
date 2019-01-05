@@ -4,7 +4,7 @@ import assert from 'assert';
 import {
     addNumberToNodeLabel,
     changeColor,
-    changeShape,
+    changeShape, checkIfNewNodeIsColored,
     concatArrayToString,
     createGraph,
     getNodeAfterArrow,
@@ -142,6 +142,40 @@ describe('The CRF Generator', () => {
         addNumberToNodeLabel(arr);
         assert.equal(arr[0], expected[0]);
     });
+    it('Correctly returns if node is in array', function () {
+        let arr = ['n4'];
+        let expected = true;
+        let actual = checkIfNewNodeIsColored(arr, 'n4');
+        assert.equal(actual, expected);
+    });
+    it('Correctly returns graph with 1 concated node', function () {
+        let codeToParse = 'function foo(x, y, z){\n' +
+            '    let a = x + 1;\n' +
+            '    let b = a + y;\n' +
+            '    let c = 0;\n' +
+            '    let arr= [true,false];}';
+
+        let expected = 'n1 [label="(0)\n' +
+            'a = x + 1;\n' +
+            'b = a + y;\n' +
+            'c = 0;\n' +
+            'arr= [true,false];", shape = "box" style="filled" fillcolor = "green"]\n';
+
+        test(codeToParse, '1,2,3', expected);
+    });
+    it('Correctly returns graph with string comparison', function () {
+        let codeToParse = 'function foo(x){\n' +
+            '    x=\'sora\';\n' +
+            '    return x;\n' +
+            '}\n';
+        let expected = 'n1 [label="(0)\n' +
+            'x=\'sora\'", shape = "box" style="filled" fillcolor = "green"]\n' +
+            'n2 [label="(1)\n' +
+            'return x;", shape = "box" style="filled" fillcolor = "green"]\n' +
+            'n1 -> n2 []\n';
+
+        test(codeToParse, '1', expected);
+    });
 });
 
 let test = function(sourceCode, args, expected) {
@@ -149,7 +183,7 @@ let test = function(sourceCode, args, expected) {
     let table = parseCodeForTable(parsedCode);
     let substitutedCode = startSymbolicSub(sourceCode, table, args);
     let actual = createGraph(sourceCode, parsedCode, args, table, substitutedCode);
-    console.log(expected.split('\n'));
+    console.log(actual);
     // console.log(expected.split('\n'));
 
     return assert.deepEqual(actual.split('\n'), expected.split('\n'));
