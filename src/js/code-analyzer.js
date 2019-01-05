@@ -151,7 +151,7 @@ let whileAndIfStatement = function whileAndIfStatement(parsedCode) {
     // test = binaryExpression(parsedCode.test);
 
     let type = parsedCode.type;
-    if (isElse) {
+    if (isElse && type!='WhileStatement') {
         type = 'Else ' + type;
     }
     parsedForTable[parsedForTable.length] = [line, type, ' ', test, ' '];

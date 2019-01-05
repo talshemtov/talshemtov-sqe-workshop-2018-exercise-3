@@ -5,11 +5,11 @@ import esgraph from 'esgraph';
 let createGraph = function(sourceCode, parsedCode, args, table, substitutedCode) {
     let cfg = esgraph(parsedCode.body[0].body);
     let dot = esgraph.dot(cfg, {counter:0, source: sourceCode});
-    return handleDot(dot, args, table, substitutedCode);
+    return handleDot(dot, args, table, substitutedCode, sourceCode);
     // return Viz('digraph { ' + finalDot + ' }');
 };
 
-let handleDot = function(dot, args, table, substitutedCode) {
+let handleDot = function(dot, args, table, substitutedCode, sourceCode) {
     dot = removeExceptionEdges(dot);
     let graphDescriptionLines = dot.split('\n');
     graphDescriptionLines = removeEntryAndExit(graphDescriptionLines);
@@ -25,8 +25,20 @@ let handleDot = function(dot, args, table, substitutedCode) {
     getDecisionNodesAndChangeToDiamondShape(graphDescriptionLines);
     addNumberToNodeLabel(graphDescriptionLines);
     colorCode(substitutedCode, args, table);
-    colorGraph(graphDescriptionLines, args, table, substitutedCode);
+    colorGraph(graphDescriptionLines, getDecisionNodesColors(graphDescriptionLines), sourceCode);
     return concatArrayToString(graphDescriptionLines);
+};
+
+let getDecisionNodesColors = function(graph) {
+    let ifCounter = 0;
+    let mapNodeToColor = []; //maps node number to color
+    for (let i=0; i<graph.length; i++) {
+        if (graph[i].includes('diamond')) {
+            mapNodeToColor.push([getNodeNumberAtArrCell(graph[i]), mapRowToColor[ifCounter][1]]);
+            ifCounter++;
+        }
+    }
+    return mapNodeToColor;
 };
 
 let removeEmptyCells = function(arr){
@@ -69,9 +81,9 @@ let getExitNodeNumber = function(arr) {
     }
 };
 
-let colorGraph = function(arr) {
+let colorGraph = function(arr, mapDecisionNodeToColor, sourceCode) {
     let currentNodeLineNameCell = [arr[0], 'n'+getNodeNumberAtArrCell(arr[0]), 0];
-    let ifCounter = 0;
+    let sortedConditions = sortConditions(sourceCode, arr);
     let coloredCells = [];
     while (currentNodeLineNameCell[1] != -1 && currentNodeLineNameCell[1]!= undefined) {
         let nameAndCell;
@@ -79,8 +91,7 @@ let colorGraph = function(arr) {
             changeColor(arr, currentNodeLineNameCell[2], 'green');
             nameAndCell = getNextNodeNameAndCellNone(arr, currentNodeLineNameCell[1]);
         } else {
-            nameAndCell = colorConditions(arr, currentNodeLineNameCell, ifCounter);
-            ifCounter++;
+            nameAndCell = colorConditions(arr, currentNodeLineNameCell, mapDecisionNodeToColor, sortedConditions);
         }
         if (nameAndCell[1] != undefined) {
             nameAndCell = checkIfNodeIsColoredFromLoop(nameAndCell, arr, coloredCells);
@@ -90,7 +101,7 @@ let colorGraph = function(arr) {
 };
 
 let checkIfNodeIsColoredFromLoop = function(nameAndCell, arr, coloredCells) {
-    let isColored = checkIfNewNodeIsColored(arr[nameAndCell[1]]);
+    let isColored = arr[nameAndCell[1]].includes('fillcolor');
     if(!isColored) {
         coloredCells.push(nameAndCell[0]);
     } else {
@@ -99,25 +110,40 @@ let checkIfNodeIsColoredFromLoop = function(nameAndCell, arr, coloredCells) {
             if(nameAndCell === -1){
                 break;
             }
-            isColored = checkIfNewNodeIsColored(nameAndCell);
+            isColored = checkIfNewNodeIsColored(coloredCells, nameAndCell[0]);
         }
     }
     return nameAndCell;
 };
 
-let checkIfNewNodeIsColored = function(line) {
-    return line.includes('fillcolor');
+let checkIfNewNodeIsColored = function(coloredCells, name) {
+    for (let i=0; i<coloredCells.length; i++) {
+        if (coloredCells[i]===name) {
+            return true;
+        } else {
+            continue;
+        }
+    }
+    return false;
 };
 
-let colorConditions = function(arr, currentNodeLineNameCell, ifCounter) {
+let colorConditions = function(arr, currentNodeLineNameCell, mapDecisionNodeToColor, sortedConditions) {
     let nameAndCell = [];
     changeColor(arr, currentNodeLineNameCell[2], 'green');
-    if (mapRowToColor[ifCounter][1] === 'green') {
+    if (getNodeColor(mapDecisionNodeToColor, currentNodeLineNameCell[0], sortedConditions) === 'green') {
         nameAndCell = getNextNodeNameAndCellTrueFalse(arr, currentNodeLineNameCell[1], 'true');
     } else {
         nameAndCell = getNextNodeNameAndCellTrueFalse(arr, currentNodeLineNameCell[1], 'false');
     }
     return nameAndCell;
+};
+
+let getNodeColor = function(mapNodeToColor, nodeLine, sortedConditions) {
+    for (let i=0; i<sortedConditions.length; i++) {
+        if (sortedConditions[i] === nodeLine) {
+            return mapNodeToColor[i][1];
+        }
+    }
 };
 
 let getNextNodeNameAndCellNone = function(arr, currentNodeName) {
@@ -141,7 +167,7 @@ let getNodeCell = function(nodeName, arr) {
 let getNextNodeNameAndCellTrueFalse = function(arr, currentNodeName, trueOrFalse) {
     for(let i=0; i<arr.length; i++) {
         if (arr[i].includes(currentNodeName + ' ->') &&
-                arr[i].includes(trueOrFalse)) {
+            arr[i].includes(trueOrFalse)) {
             let nodeName = getNodeAfterArrow(arr[i]);
             return [nodeName, getNodeCell(nodeName, arr)];
         }
@@ -179,22 +205,34 @@ let concatNodesAndRemoveEdge = function(arr, i) {
     let edgeToRemove = 'n' + getNodeNumberAtArrCell(arr[i+1]) + ' -> n' + getNodeNumberAtArrCell(arr[i+2]) + ' []';
     arr[i] = arr[i].replace(getNodeLabel(arr[i]), newNodeLabel);
     arr.splice(i+1, 1);
+    replaceAndRemoveEdges(arr, i, edgeToReplace, edgeToRemove);
+};
+
+let replaceAndRemoveEdges = function(arr, i, edgeToReplace, edgeToRemove){
     for (let j=0; j<arr.length; j++) {
         if(arr[j]===edgeToReplace) {
-            arr[j] = 'n' + getNodeNumberAtArrCell(arr[i]) + ' -> n' + getNodeNumberAtArrCell(arr[i+2]) + ' []';
+            if (shouldReplaceEdge(arr, i)) {
+                arr[j] = 'n' + getNodeNumberAtArrCell(arr[i]) + ' -> n' + getNodeNumberAtArrCell(arr[i+1]) + ' []';
+            } else {
+                arr.splice(j, 1);
+            }
         } else if (arr[j] === edgeToRemove) {
             arr.splice(j, 1);
         }
     }
 };
 
+let shouldReplaceEdge = function(arr, i){
+    return getNodeNumberAtArrCell(arr[i+1]) != '' && getNodeNumberAtArrCell(arr[i]) != getNodeNumberAtArrCell(arr[i+1]);
+};
+
 let changeShape = function(arr, i, shape) {
-    let nodeUpToBracket = arr[i].substring(0, arr[i].indexOf(']'));
+    let nodeUpToBracket = arr[i].substring(0, arr[i].lastIndexOf(']'));
     arr[i] = nodeUpToBracket + ', shape = "' + shape + '"]';
 };
 
 let changeColor = function(arr, i, color) {
-    let nodeUpToBracket = arr[i].substring(0, arr[i].indexOf(']'));
+    let nodeUpToBracket = arr[i].substring(0, arr[i].lastIndexOf(']'));
     arr[i] = nodeUpToBracket + ' style="filled" fillcolor = "' + color + '"]';
 };
 
@@ -263,6 +301,33 @@ let getNodeLabel = function(string) {
         string.substring(string.indexOf('label')+7).indexOf('"')); //how many chars between 'label="' to the last '"'
 };
 
+let sortConditions = function(sourceCode, graph) {
+    let sourceCodeArr = sourceCode.split('\n');
+    let decisionNodes = getDecisionNodes(graph);
+    let sortedConditionNodes = []; //nodes of graph in the order of the code
+    // let usedConditionsInCode = []; //lines in the code that have been matched to a node
+    for (let i=0; i<sourceCodeArr.length; i++) {
+        for (let j=0; j<decisionNodes.length; j++) {
+            let label = getNodeLabel(decisionNodes[j]);
+            label = label.substring(label.indexOf(')')+2);
+            if (sourceCodeArr[i].includes('('+label+')')) {
+                sortedConditionNodes.push(decisionNodes[j]);
+            }
+        }
+    }
+    return sortedConditionNodes;
+};
+
+let getDecisionNodes= function(graph) {
+    let decisionNodes = [];
+    for (let i=0; i<graph.length; i++) {
+        if (graph[i].includes('diamond')) {
+            decisionNodes.push(graph[i]);
+        }
+    }
+    return decisionNodes;
+};
+
 export {createGraph};
 export {concatArrayToString};
 export {getNodeLabel};
@@ -271,3 +336,4 @@ export {getNodeAfterArrow};
 export {changeShape};
 export {changeColor};
 export {addNumberToNodeLabel};
+export {checkIfNewNodeIsColored};

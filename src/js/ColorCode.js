@@ -44,7 +44,11 @@ let replaceValue = function(tableRow, splittedArgs, i, assignmentString, argName
         splittedArgs[i] = '['+eval('let '+argNames[i]+' ='+current + ';'+tableRow[2] + '=' + newValInIndex + ';' + argNames[i]).toString() + ']';
         return splittedArgs;
     } else {
-        splittedArgs[i] = eval(assignmentString + tableRow[4]);
+        if (tableRow[4].substring(0,1)==='\'' && tableRow[4].substring(tableRow[4].length-1)==='\'') {
+            splittedArgs[i] = tableRow[4];
+        } else {
+            splittedArgs[i] = eval(assignmentString + tableRow[4]);
+        }
     }
 };
 

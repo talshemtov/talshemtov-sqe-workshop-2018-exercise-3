@@ -267,7 +267,7 @@ let replaceOtherValues = function(string, localParams, isName, row) {
 
 let shouldReplace = function(string, localParams, i) {
     return (cond1(string, localParams, i) || cond2(string, localParams, i) || string.includes(localParams[i][0]+'[') || isArg(string)
-    || string === localParams[i][0]);
+    || string === localParams[i][0] || string.includes('['+localParams[i][0]));
 };
 
 let cond1 = function(string, localParams, i) {
@@ -328,7 +328,7 @@ let checkIfMemberInBracketIsArg = function(res) {
         }
     }
     return res;
-}
+};
 
 let     updateArrValLocalParams = function(string, localParams, i, row) {
     for(let i=0; i<localParams.length; i++) {
@@ -376,15 +376,6 @@ let updateValue = function(rowToUpdate, localParams, indexToUpdate) {
     }
     return localParams;
 };
-
-// let getArrValue = function(value, localParams) {
-//     for (let i=0; i<localParams.length; i++) {
-//     if(localParams[i][0]===value) {
-//         return localParams[i][1];
-//     }
-// }
-// return -1;
-// };
 
 let substitute = function(details, localParams) {
     let value = details[4];
